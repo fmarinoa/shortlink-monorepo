@@ -61,6 +61,7 @@ jobs:
         run: pnpm deploy:prod
         env:
           SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+          CORS_ALLOWED_ORIGINS: ${{ vars.CORS_ALLOWED_ORIGINS }}
 
       - name: Create GitHub Release
         if: success()

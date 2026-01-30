@@ -1,13 +1,19 @@
 import middy from "@middy/core";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+const { AWS_STAGE: stage, CORS_ALLOWED_ORIGINS: corsEnv } = process.env;
 
-const ALLOWED_ORIGINS = {
-  dev: ["*"],
-  prod: [
-    "https://links.francomarino.dev",
-    "https://www.links.francomarino.dev",
-    "https://main.d20gpq2599pdhb.amplifyapp.com",
-  ],
+const getAllowedOrigins = () => {
+  if (stage === "dev") {
+    return ["*"];
+  }
+
+  if (corsEnv) {
+    return corsEnv.split(",").map((url) => url.trim());
+  }
+
+  throw new Error(
+    "CORS_ALLOWED_ORIGINS environment variable is required for production",
+  );
 };
 
 export const corsMiddleware = (): middy.MiddlewareObj<
@@ -15,12 +21,9 @@ export const corsMiddleware = (): middy.MiddlewareObj<
   APIGatewayProxyResult
 > => {
   const addCorsHeaders = (request: any): void => {
-    const stage = process.env.AWS_STAGE || "dev";
     const origin =
       request.event.headers?.origin || request.event.headers?.Origin || "";
-    const allowedOrigins =
-      ALLOWED_ORIGINS[stage as keyof typeof ALLOWED_ORIGINS] ||
-      ALLOWED_ORIGINS.dev;
+    const allowedOrigins = getAllowedOrigins();
 
     let corsHeaders: Record<string, string>;
 
