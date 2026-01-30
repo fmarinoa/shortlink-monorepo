@@ -1,0 +1,184 @@
+service: shortlink-api
+frameworkVersion: "4"
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  region: us-east-2
+  apiGateway:
+    apiKeys:
+      - name: AdminKey${self:custom.envSuffix.${self:provider.stage}}
+        description: "Master API Key for admin access"
+    usagePlan:
+      quota:
+        limit: 500
+        period: MONTH
+      throttle:
+        burstLimit: 200
+        rateLimit: 100
+  environment:
+    TABLE_NAME: ${self:custom.tableName}
+    DOMAIN: ${self:custom.domain}
+    API_URL: ${self:custom.apiUrl.${self:provider.stage}}
+    AWS_STAGE: ${self:provider.stage}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:Scan
+            - dynamodb:DeleteItem
+          Resource:
+            - !GetAtt LinksTable.Arn
+
+plugins:
+  - serverless-domain-manager
+
+custom:
+  envSuffix:
+    dev: Dev
+    prod: Prod
+  tableName: Links${self:custom.envSuffix.${self:provider.stage}}
+  domain: francomarino.dev
+  corsOrigins:
+    dev: "*"
+    prod: "https://links.francomarino.dev,https://main.d20gpq2599pdhb.amplifyapp.com"
+  apiUrl:
+    dev:
+      Fn::Join:
+        - ""
+        - - "https://"
+          - Ref: ApiGatewayRestApi
+          - ".execute-api."
+          - Ref: AWS::Region
+          - ".amazonaws.com/${self:provider.stage}"
+    prod: "https://${self:custom.domain}"
+  domainEnabled:
+    dev: false
+    prod: true
+  customDomain:
+    domainName: ${self:custom.domain}
+    basePath: ""
+    stage: ${self:provider.stage}
+    certificateName: "francomarino.dev"
+    createRoute53Record: false
+    endpointType: "regional"
+    securityPolicy: tls_1_2
+    enabled: ${self:custom.domainEnabled.${self:provider.stage}}
+
+functions:
+  createLink:
+    handler: src/handler/index.create
+    events:
+      - http:
+          path: /links
+          method: post
+          private: true
+          cors:
+            origin: ${self:custom.corsOrigins.${self:provider.stage}}
+            headers:
+              - Content-Type
+              - X-Api-Key
+            allowCredentials: false
+  redirectLink:
+    handler: src/handler/index.redirect
+    events:
+      - http:
+          path: /{slug}
+          method: get
+      - http:
+          path: /
+          method: get
+  getAllLinks:
+    handler: src/handler/index.getAll
+    events:
+      - http:
+          path: /links
+          method: get
+          cors:
+            origin: ${self:custom.corsOrigins.${self:provider.stage}}
+            allowCredentials: false
+  deleteLink:
+    handler: src/handler/index.delete
+    events:
+      - http:
+          path: /links/{slug}
+          method: delete
+          private: true
+          cors:
+            origin: ${self:custom.corsOrigins.${self:provider.stage}}
+            headers:
+              - Content-Type
+              - X-Api-Key
+            allowCredentials: false
+  updateLink:
+    handler: src/handler/index.update
+    events:
+      - http:
+          path: /links/{slug}
+          method: put
+          private: true
+          cors:
+            origin: ${self:custom.corsOrigins.${self:provider.stage}}
+            headers:
+              - Content-Type
+              - X-Api-Key
+            allowCredentials: false
+
+resources:
+  Resources:
+    LinksTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tableName}
+        AttributeDefinitions:
+          - AttributeName: slug
+            AttributeType: S
+        KeySchema:
+          - AttributeName: slug
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Credentials: "'false'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
+
+    GatewayResponseDefault5XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Credentials: "'false'"
+        ResponseType: DEFAULT_5XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
+
+    GatewayResponseUnauthorized:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Credentials: "'false'"
+        ResponseType: UNAUTHORIZED
+        RestApiId:
+          Ref: ApiGatewayRestApi
+
+    GatewayResponseAccessDenied:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Credentials: "'false'"
+        ResponseType: ACCESS_DENIED
+        RestApiId:
+          Ref: ApiGatewayRestApi

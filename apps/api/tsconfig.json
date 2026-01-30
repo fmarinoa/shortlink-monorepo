@@ -1,0 +1,12 @@
+{
+  "extends": "@tsconfig/node22/tsconfig.json",
+  "include": ["src", "tests"],
+  "exclude": ["dist"],
+  "compilerOptions": {
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["./src/*"],
+    },
+    "isolatedModules": true
+  }
+}
