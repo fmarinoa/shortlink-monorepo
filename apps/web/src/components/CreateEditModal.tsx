@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
 import type { LinkType } from "@shortlink/core";
+import { useEffect, useRef } from "react";
 
 interface CreateEditModalProps {
   isOpen: boolean;
@@ -20,6 +21,19 @@ export default function CreateEditModal({
   onSubmit,
   onFormDataChange,
 }: CreateEditModalProps) {
+  const slugInputRef = useRef<HTMLInputElement>(null);
+  const urlInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (editingLink) {
+        urlInputRef.current?.focus();
+      } else {
+        slugInputRef.current?.focus();
+      }
+    }
+  }, [isOpen, editingLink]);
+
   if (!isOpen) return null;
 
   return (
@@ -42,6 +56,7 @@ export default function CreateEditModal({
                 type="text"
                 required
                 disabled={!!editingLink || isLoading}
+                ref={slugInputRef}
                 className={`flex-1 bg-slate-950 border border-slate-700 text-white text-sm rounded-r-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 ${editingLink || isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                 placeholder="mi-link"
                 value={formData.slug}
@@ -60,6 +75,7 @@ export default function CreateEditModal({
               type="url"
               required
               disabled={isLoading}
+              ref={urlInputRef}
               className="bg-slate-950 border border-slate-700 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="https://google.com"
               value={formData.url}
