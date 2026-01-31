@@ -8,11 +8,11 @@ import {
 } from "lucide-react";
 import type { LinkType } from "@shortlink/core";
 import { formatDate } from "@/utils";
+import { VITE_API_URL } from "..";
 
 interface LinkTableProps {
   links: LinkType[];
   loading: boolean;
-  baseUrl: string;
   onEdit: (link: LinkType) => void;
   onDelete: (slug: string) => void;
   onCopyLink: (url: string) => void;
@@ -21,11 +21,12 @@ interface LinkTableProps {
 export default function LinkTable({
   links,
   loading,
-  baseUrl,
   onEdit,
   onDelete,
   onCopyLink,
 }: LinkTableProps) {
+  const fullLink = (slug: string) => `${VITE_API_URL}/${slug}`;
+
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto">
@@ -68,16 +69,18 @@ export default function LinkTable({
                   {/* SLUG COLUMN */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
+                      <button
+                        onClick={() => window.open(link.url, "_blank")}
+                        className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400 hover:bg-indigo-500/20 transition-colors cursor-pointer"
+                        title="Abrir link"
+                      >
                         <ExternalLink size={18} />
-                      </div>
+                      </button>
                       <div>
                         <div className="font-medium text-white flex items-center gap-2">
                           /{link.slug}
                           <button
-                            onClick={() =>
-                              onCopyLink(`${baseUrl}/${link.slug}`)
-                            }
+                            onClick={() => onCopyLink(fullLink(link.slug))}
                             className="text-slate-500 hover:cursor-pointer hover:text-indigo-300 transition-colors"
                             title="Copiar link"
                           >

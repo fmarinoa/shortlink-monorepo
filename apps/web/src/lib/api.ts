@@ -1,10 +1,9 @@
 import axios from "axios";
 import { getApiKey } from "../hooks/localStorage";
-
-const { VITE_API_URL: baseURL } = import.meta.env;
+import { VITE_API_URL } from "..";
 
 export const api = axios.create({
-  baseURL,
+  baseURL: VITE_API_URL,
   headers: {
     "Content-Type": "application/json",
   },

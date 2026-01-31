@@ -12,7 +12,6 @@ import Toast from "./components/Toast";
 import { copyToClipboard, getErrorMessage } from "./utils";
 
 function App() {
-  const { VITE_API_URL: baseUrl } = import.meta.env;
   const { data: links, isLoading, isError, error } = useLinks();
   const { createLink, deleteLink, updateLink } = useLinkMutations();
 
@@ -127,7 +126,6 @@ function App() {
       <LinkTable
         links={filteredLinks}
         loading={isLoading}
-        baseUrl={baseUrl}
         onEdit={handleOpenEdit}
         onDelete={handleDelete}
         onCopyLink={(text) => {
