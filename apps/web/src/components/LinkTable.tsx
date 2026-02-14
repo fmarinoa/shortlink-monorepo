@@ -88,7 +88,10 @@ export default function LinkTable({
                           </button>
                         </div>
                         <span className="text-xs text-slate-500">
-                          {formatDate(link.creationDate)}
+                          Creado: {formatDate(link.creationDate)}
+                        </span>
+                        <span className="text-xs text-slate-500 block">
+                          Modificado: {formatDate(link.lastUpdateDate)}
                         </span>
                       </div>
                     </div>

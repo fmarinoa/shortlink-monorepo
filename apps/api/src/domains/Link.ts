@@ -1,6 +1,5 @@
 import { Result } from "@shortlink/core";
 import z, { ZodError } from "zod";
-import th from "zod/v4/locales/th.js";
 
 const urlValidationSchema = z.object({
   url: z.url(),

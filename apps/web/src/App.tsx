@@ -43,7 +43,7 @@ function App() {
 
   const allLinks = links?.data || [];
   const filteredLinks = allLinks.filter(
-    (link) =>
+    (link: LinkType) =>
       link.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
       link.url.toLowerCase().includes(searchTerm.toLowerCase()),
   );
@@ -94,7 +94,7 @@ function App() {
   };
 
   const handleDelete = (slug: string) => {
-    const linkToDelete = allLinks.find((link) => link.slug === slug);
+    const linkToDelete = allLinks.find((link: LinkType) => link.slug === slug);
     if (linkToDelete) {
       setDeletingLink(linkToDelete);
       setFormData({ slug: linkToDelete.slug, url: linkToDelete.url });
