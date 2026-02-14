@@ -5,3 +5,8 @@ export interface LinkType {
   lastUpdateDate: number;
   visitCount: number;
 };
+
+export interface LinksResponse {
+  total: number;
+  data: LinkType[];
+}
