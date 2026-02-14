@@ -57,7 +57,7 @@ export class Link {
   }
 
   incrementVisitCount(): void {
-    this.visitCount += 1;
+    this.visitCount = (this.visitCount || 0) + 1;
   }
 
   toJSON() {

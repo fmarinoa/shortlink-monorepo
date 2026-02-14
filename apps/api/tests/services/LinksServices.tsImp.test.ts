@@ -172,6 +172,7 @@ describe("LinksServiceImp", () => {
       const linkUpdated = new Link({ ...updatedLink, url: "https://new-url.com" });
 
       const mockRepository = {
+        getBySlug: jest.fn().mockResolvedValue(Result.ok(link)),
         update: jest.fn().mockResolvedValue(Result.ok(linkUpdated))
       } as unknown as jest.Mocked<Repository>;
 
@@ -182,6 +183,7 @@ describe("LinksServiceImp", () => {
       expect(result.isSuccess).toBe(true);
       expect(result.getValue()).toEqual({
         slug: "test",
+        url: "https://new-url.com",
         shortUrl: "https://test-api.com/test",
       });
       expect(mockRepository.update).toHaveBeenCalled();
@@ -192,7 +194,7 @@ describe("LinksServiceImp", () => {
       const error = new Error("Slug not found");
 
       const mockRepository = {
-        update: jest.fn().mockResolvedValue(Result.fail(error))
+        getBySlug: jest.fn().mockResolvedValue(Result.fail(error))
       } as unknown as jest.Mocked<Repository>;
 
       const service = new LinksServiceImpStub({ repository: mockRepository, apiUrl });

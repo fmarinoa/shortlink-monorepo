@@ -78,7 +78,7 @@ describe("DynamoRepositoryImp", () => {
 
       expect(result.isSuccess).toBe(false);
       expect(result.getErrorValue().message).toContain(
-        "Error creating link in DynamoDB",
+        "Error creating Link in DynamoDB",
       );
     });
   });
@@ -198,7 +198,7 @@ describe("DynamoRepositoryImp", () => {
 
       expect(result.isSuccess).toBe(false);
       expect(result.getErrorValue().message).toContain(
-        "Error deleting link in DynamoDB",
+        "Error deleting Link in DynamoDB",
       );
     });
   });
@@ -254,7 +254,7 @@ describe("DynamoRepositoryImp", () => {
 
       expect(result.isSuccess).toBe(false);
       expect(result.getErrorValue().message).toContain(
-        "Error updating link in DynamoDB",
+        "Error updating Link in DynamoDB",
       );
     });
   });

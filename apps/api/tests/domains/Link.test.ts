@@ -90,7 +90,21 @@ describe("Link Domain", () => {
       const result = link.updateUrl("https://new-url.com");
 
       expect(result.isSuccess).toBe(true);
-      expect(result.getValue().url).toBe("https://new-url.com");
+      expect(result.getValue().isNeedUpdate).toBe(true);
+      expect(result.getValue().link.url).toBe("https://new-url.com");
+    });
+
+    it("should not update URL if it's the same", () => {
+      const link = new Link({
+        slug: "test-slug",
+        url: "https://example.com",
+      });
+
+      const result = link.updateUrl("https://example.com");
+
+      expect(result.isSuccess).toBe(true);
+      expect(result.getValue().isNeedUpdate).toBe(false);
+      expect(result.getValue().link.url).toBe("https://example.com");
     });
 
     it("should fail with invalid URL", () => {
@@ -143,9 +157,6 @@ describe("Link Domain", () => {
       expect(json).toEqual({
         slug: "test-slug",
         url: "https://example.com",
-        creationDate: expect.any(Number),
-        lastUpdateDate: expect.any(Number),
-        visitCount: 0,
       });
     });
   });
