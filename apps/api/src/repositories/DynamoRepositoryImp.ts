@@ -26,6 +26,34 @@ export class DynamoRepositoryImp implements Repository {
     }
   }
 
+  private buildUpdateExpression(
+    link: Link,
+    fieldsToUpdate: string[]
+  ): {
+    UpdateExpression: string;
+    ExpressionAttributeNames: Record<string, string>;
+    ExpressionAttributeValues: Record<string, unknown>;
+  } {
+    const attributeNames: Record<string, string> = {};
+    const attributeValues: Record<string, unknown> = {};
+    const setExpressions: string[] = [];
+
+    fieldsToUpdate.forEach((field) => {
+      const attributeName = `#${field}`;
+      const attributeValue = `:${field}`;
+
+      attributeNames[attributeName] = field;
+      attributeValues[attributeValue] = link[field as keyof Link];
+      setExpressions.push(`${attributeName} = ${attributeValue}`);
+    });
+
+    return {
+      UpdateExpression: `SET ${setExpressions.join(", ")}`,
+      ExpressionAttributeNames: attributeNames,
+      ExpressionAttributeValues: attributeValues,
+    };
+  }
+
   async create(link: Link): Promise<Result<Link, Error>> {
     try {
       const request = new Link({ ...link, creationDate: Date.now(), visitCount: 0 });
@@ -117,30 +145,31 @@ export class DynamoRepositoryImp implements Repository {
     try {
       const shouldUpdateLastDate = opts?.lastUpdateDate ?? true;
       const shouldUpdateLastVisitDate = opts?.lastVisitDate ?? false;
+
       const request = new Link({
         ...link,
         ...(shouldUpdateLastDate && { lastUpdateDate: Date.now() }),
         ...(shouldUpdateLastVisitDate && { lastVisitDate: Date.now() })
       });
 
+      const fieldsToUpdate = ["url", "visitCount"];
+      if (shouldUpdateLastDate) {
+        fieldsToUpdate.push("lastUpdateDate");
+      }
+      if (shouldUpdateLastVisitDate) {
+        fieldsToUpdate.push("lastVisitDate");
+      }
+
+      const { UpdateExpression, ExpressionAttributeNames, ExpressionAttributeValues } =
+        this.buildUpdateExpression(request, fieldsToUpdate);
+
       await dynamoClient.send(
         new UpdateCommand({
           TableName: this.props.tableName,
           Key: { slug: request.slug },
-          UpdateExpression:
-            "SET #url = :url, #lastUpdateDate = :lastUpdateDate, #lastVisitDate = :lastVisitDate, #visitCount = :visitCount",
-          ExpressionAttributeNames: {
-            "#url": "url",
-            "#lastUpdateDate": "lastUpdateDate",
-            "#lastVisitDate": "lastVisitDate",
-            "#visitCount": "visitCount",
-          },
-          ExpressionAttributeValues: {
-            ":url": request.url,
-            ":lastUpdateDate": request.lastUpdateDate,
-            ":lastVisitDate": request.lastVisitDate,
-            ":visitCount": request.visitCount,
-          },
+          UpdateExpression,
+          ExpressionAttributeNames,
+          ExpressionAttributeValues,
           ConditionExpression: "attribute_exists(slug)",
         }),
       );
