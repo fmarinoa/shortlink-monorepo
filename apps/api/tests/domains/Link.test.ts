@@ -159,5 +159,28 @@ describe("Link Domain", () => {
         url: "https://example.com",
       });
     });
+
+    it("should include lastVisitDate in serialization", () => {
+      const now = Date.now();
+      const link = new Link({
+        slug: "test-slug",
+        url: "https://example.com",
+        creationDate: now,
+        lastUpdateDate: now,
+        lastVisitDate: now,
+        visitCount: 5,
+      });
+
+      const json = link.toJSON();
+
+      expect(json).toEqual({
+        slug: "test-slug",
+        url: "https://example.com",
+        creationDate: now,
+        lastUpdateDate: now,
+        lastVisitDate: now,
+        visitCount: 5,
+      });
+    });
   });
 });

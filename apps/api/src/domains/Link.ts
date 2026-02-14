@@ -20,7 +20,7 @@ const createSchema = z.object({
 
 export class Link {
   slug!: string;
-  url!: string
+  url!: string;
   creationDate!: number;
   lastUpdateDate!: number;
   lastVisitDate!: number;
@@ -42,7 +42,9 @@ export class Link {
     return Result.ok(new Link({ ...(data as Partial<Link>) }));
   }
 
-  updateUrl(newUrl: unknown): Result<{ isNeedUpdate: boolean; link: Link }, ZodError> {
+  updateUrl(
+    newUrl: unknown,
+  ): Result<{ isNeedUpdate: boolean; link: Link }, ZodError> {
     if (this.url === newUrl) {
       return Result.ok({ isNeedUpdate: false, link: this });
     }
@@ -53,7 +55,10 @@ export class Link {
       return Result.fail(error);
     }
 
-    return Result.ok({ isNeedUpdate: true, link: new Link({ ...this, url: newUrl }) });
+    return Result.ok({
+      isNeedUpdate: true,
+      link: new Link({ ...this, url: newUrl }),
+    });
   }
 
   incrementVisitCount(): void {
@@ -66,6 +71,7 @@ export class Link {
       url: this.url,
       creationDate: this.creationDate,
       lastUpdateDate: this.lastUpdateDate,
+      lastVisitDate: this.lastVisitDate,
       visitCount: this.visitCount,
     };
   }

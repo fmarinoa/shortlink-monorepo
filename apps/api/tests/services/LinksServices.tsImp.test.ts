@@ -67,6 +67,24 @@ describe("LinksServiceImp", () => {
       expect(mockRepository.update).toHaveBeenCalled();
     });
 
+    it("should update link with lastVisitDate when redirecting", async () => {
+      const link = new Link(createdLink);
+
+      const mockRepository = {
+        getBySlug: jest.fn().mockResolvedValue(Result.ok(link)),
+        update: jest.fn().mockResolvedValue(Result.ok(link))
+      } as unknown as jest.Mocked<Repository>;
+
+      const service = new LinksServiceImpStub({ repository: mockRepository, apiUrl });
+
+      await service.redirectLink(link);
+
+      expect(mockRepository.update).toHaveBeenCalledWith(
+        expect.any(Link),
+        { lastUpdateDate: false, lastVisitDate: true }
+      );
+    });
+
     it("should return portfolio URL when slug is empty", async () => {
       const mockRepository = {} as unknown as jest.Mocked<Repository>;
       const service = new LinksServiceImpStub({ repository: mockRepository, apiUrl });

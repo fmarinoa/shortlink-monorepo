@@ -6,5 +6,8 @@ export interface Repository {
   getBySlug(slug: string): Promise<Result<Link, Error>>;
   getAll(): Promise<Result<Link[], Error>>;
   delete(link: Link): Promise<Result<void, Error>>;
-  update(link: Link, opts?: { lastUpdateDate?: boolean, lastVisitDate?: boolean }): Promise<Result<Link, Error>>;
+  update(
+    link: Link,
+    opts?: { lastUpdateDate?: boolean; lastVisitDate?: boolean },
+  ): Promise<Result<Link, Error>>;
 }

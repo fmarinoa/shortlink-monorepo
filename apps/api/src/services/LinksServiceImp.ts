@@ -48,7 +48,10 @@ export class LinksServiceImp implements LinksService {
 
     linkToIncrementVisitCount.incrementVisitCount();
 
-    await this.props.repository.update(linkToIncrementVisitCount, { lastUpdateDate: false, lastVisitDate: true });
+    await this.props.repository.update(linkToIncrementVisitCount, {
+      lastUpdateDate: false,
+      lastVisitDate: true,
+    });
 
     console.log(
       `Link with slug ${linkToIncrementVisitCount.slug} updated visit count: ${linkToIncrementVisitCount.visitCount}`,

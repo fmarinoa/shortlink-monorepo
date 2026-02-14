@@ -257,5 +257,68 @@ describe("DynamoRepositoryImp", () => {
         "Error updating Link in DynamoDB",
       );
     });
+
+    it("should update with lastUpdateDate when opts.lastUpdateDate is true", async () => {
+      const link = new Link({ 
+        slug: "test", 
+        url: "https://new-url.com",
+        visitCount: 5,
+        creationDate: Date.now()
+      });
+
+      (dynamoClient.send as jest.Mock).mockResolvedValue({});
+
+      const result = await repository.update(link, { lastUpdateDate: true });
+
+      expect(result.isSuccess).toBe(true);
+      expect(result.getValue().lastUpdateDate).toBeDefined();
+      expect(result.getValue().lastUpdateDate).toBeGreaterThan(0);
+      
+      const updateCommand = (dynamoClient.send as jest.Mock).mock.calls[0][0];
+      expect(updateCommand.input.UpdateExpression).toContain("lastUpdateDate");
+      expect(updateCommand.input.UpdateExpression).not.toContain("lastVisitDate");
+    });
+
+    it("should update with lastVisitDate when opts.lastVisitDate is true", async () => {
+      const link = new Link({ 
+        slug: "test", 
+        url: "https://new-url.com",
+        visitCount: 5,
+        creationDate: Date.now()
+      });
+
+      (dynamoClient.send as jest.Mock).mockResolvedValue({});
+
+      const result = await repository.update(link, { lastUpdateDate: false, lastVisitDate: true });
+
+      expect(result.isSuccess).toBe(true);
+      expect(result.getValue().lastVisitDate).toBeDefined();
+      expect(result.getValue().lastVisitDate).toBeGreaterThan(0);
+      
+      const updateCommand = (dynamoClient.send as jest.Mock).mock.calls[0][0];
+      expect(updateCommand.input.UpdateExpression).toContain("lastVisitDate");
+      expect(updateCommand.input.UpdateExpression).not.toContain("lastUpdateDate");
+    });
+
+    it("should update both lastUpdateDate and lastVisitDate when both opts are true", async () => {
+      const link = new Link({ 
+        slug: "test", 
+        url: "https://new-url.com",
+        visitCount: 5,
+        creationDate: Date.now()
+      });
+
+      (dynamoClient.send as jest.Mock).mockResolvedValue({});
+
+      const result = await repository.update(link, { lastUpdateDate: true, lastVisitDate: true });
+
+      expect(result.isSuccess).toBe(true);
+      expect(result.getValue().lastUpdateDate).toBeDefined();
+      expect(result.getValue().lastVisitDate).toBeDefined();
+      
+      const updateCommand = (dynamoClient.send as jest.Mock).mock.calls[0][0];
+      expect(updateCommand.input.UpdateExpression).toContain("lastUpdateDate");
+      expect(updateCommand.input.UpdateExpression).toContain("lastVisitDate");
+    });
   });
 });

@@ -118,6 +118,11 @@ export default function LinkTable({
                       </span>
                       <span className="text-xs text-slate-500">visitas</span>
                     </div>
+                    {link.lastVisitDate && (
+                      <span className="text-xs text-slate-500 block mt-1">
+                        Última visita: {formatDate(link.lastVisitDate)}
+                      </span>
+                    )}
                   </td>
 
                   {/* ACTIONS COLUMN */}

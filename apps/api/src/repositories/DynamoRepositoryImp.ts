@@ -28,7 +28,7 @@ export class DynamoRepositoryImp implements Repository {
 
   private buildUpdateExpression(
     link: Link,
-    fieldsToUpdate: string[]
+    fieldsToUpdate: string[],
   ): {
     UpdateExpression: string;
     ExpressionAttributeNames: Record<string, string>;
@@ -56,7 +56,11 @@ export class DynamoRepositoryImp implements Repository {
 
   async create(link: Link): Promise<Result<Link, Error>> {
     try {
-      const request = new Link({ ...link, creationDate: Date.now(), visitCount: 0 });
+      const request = new Link({
+        ...link,
+        creationDate: Date.now(),
+        visitCount: 0,
+      });
 
       await dynamoClient.send(
         new PutCommand({
@@ -141,7 +145,10 @@ export class DynamoRepositoryImp implements Repository {
     }
   }
 
-  async update(link: Link, opts?: { lastUpdateDate?: boolean, lastVisitDate?: boolean }): Promise<Result<Link, Error>> {
+  async update(
+    link: Link,
+    opts?: { lastUpdateDate?: boolean; lastVisitDate?: boolean },
+  ): Promise<Result<Link, Error>> {
     try {
       const shouldUpdateLastDate = opts?.lastUpdateDate ?? true;
       const shouldUpdateLastVisitDate = opts?.lastVisitDate ?? false;
@@ -149,7 +156,7 @@ export class DynamoRepositoryImp implements Repository {
       const request = new Link({
         ...link,
         ...(shouldUpdateLastDate && { lastUpdateDate: Date.now() }),
-        ...(shouldUpdateLastVisitDate && { lastVisitDate: Date.now() })
+        ...(shouldUpdateLastVisitDate && { lastVisitDate: Date.now() }),
       });
 
       const fieldsToUpdate = ["url", "visitCount"];
@@ -160,8 +167,11 @@ export class DynamoRepositoryImp implements Repository {
         fieldsToUpdate.push("lastVisitDate");
       }
 
-      const { UpdateExpression, ExpressionAttributeNames, ExpressionAttributeValues } =
-        this.buildUpdateExpression(request, fieldsToUpdate);
+      const {
+        UpdateExpression,
+        ExpressionAttributeNames,
+        ExpressionAttributeValues,
+      } = this.buildUpdateExpression(request, fieldsToUpdate);
 
       await dynamoClient.send(
         new UpdateCommand({
