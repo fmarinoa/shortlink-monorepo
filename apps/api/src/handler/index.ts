@@ -3,7 +3,11 @@ import jsonBodyParser from "@middy/http-json-body-parser";
 import httpErrorHandler from "@middy/http-error-handler";
 import { linksController } from "@/controllers";
 import { APIGatewayProxyEvent } from "aws-lambda";
-import { requireBody, corsMiddleware } from "@/middlewares";
+import {
+  requireBody,
+  requirePathParameters,
+  corsMiddleware,
+} from "@/middlewares";
 
 module.exports = {
   create: middy((event: APIGatewayProxyEvent) =>
@@ -17,11 +21,13 @@ module.exports = {
     linksController.deleteLink(event),
   )
     .use(corsMiddleware())
+    .use(requirePathParameters(["slug"]))
     .use(httpErrorHandler()),
   update: middy((event: APIGatewayProxyEvent) =>
     linksController.updateLink(event),
   )
     .use(requireBody())
+    .use(requirePathParameters(["slug"]))
     .use(jsonBodyParser())
     .use(corsMiddleware())
     .use(httpErrorHandler()),

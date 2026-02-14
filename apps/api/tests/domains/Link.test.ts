@@ -3,7 +3,7 @@ import { Link } from "@/domains/Link";
 describe("Link Domain", () => {
   describe("Link.create", () => {
     it("should create a valid link", () => {
-      const result = Link.create({
+      const result = Link.instanceForCreate({
         slug: "test-slug",
         url: "https://example.com",
       });
@@ -15,7 +15,7 @@ describe("Link Domain", () => {
     });
 
     it("should transform slug to lowercase", () => {
-      const result = Link.create({
+      const result = Link.instanceForCreate({
         slug: "TEST-SLUG",
         url: "https://example.com",
       });
@@ -25,7 +25,7 @@ describe("Link Domain", () => {
     });
 
     it("should fail with slug less than 2 characters", () => {
-      const result = Link.create({
+      const result = Link.instanceForCreate({
         slug: "a",
         url: "https://example.com",
       });
@@ -37,7 +37,7 @@ describe("Link Domain", () => {
     });
 
     it("should fail with slug more than 50 characters", () => {
-      const result = Link.create({
+      const result = Link.instanceForCreate({
         slug: "a".repeat(51),
         url: "https://example.com",
       });
@@ -46,7 +46,7 @@ describe("Link Domain", () => {
     });
 
     it("should fail with invalid slug characters", () => {
-      const result = Link.create({
+      const result = Link.instanceForCreate({
         slug: "test_slug!",
         url: "https://example.com",
       });
@@ -59,7 +59,7 @@ describe("Link Domain", () => {
     });
 
     it("should fail with invalid URL", () => {
-      const result = Link.create({
+      const result = Link.instanceForCreate({
         slug: "test-slug",
         url: "not-a-url",
       });
@@ -71,7 +71,7 @@ describe("Link Domain", () => {
     });
 
     it("should accept valid slug with numbers and hyphens", () => {
-      const result = Link.create({
+      const result = Link.instanceForCreate({
         slug: "test-123-slug",
         url: "https://example.com",
       });
@@ -80,38 +80,60 @@ describe("Link Domain", () => {
     });
   });
 
-  describe("Link.update", () => {
-    it("should validate new URL correctly", () => {
-      const result = Link.update("https://new-url.com");
+  describe("Link.updateUrl", () => {
+    it("should update URL correctly", () => {
+      const link = new Link({
+        slug: "test-slug",
+        url: "https://example.com",
+      });
+
+      const result = link.updateUrl("https://new-url.com");
 
       expect(result.isSuccess).toBe(true);
-      expect(result.getValue()).toBe("https://new-url.com");
+      expect(result.getValue().url).toBe("https://new-url.com");
     });
 
     it("should fail with invalid URL", () => {
-      const result = Link.update("invalid-url");
+      const link = new Link({
+        slug: "test-slug",
+        url: "https://example.com",
+      });
+
+      const result = link.updateUrl("invalid-url");
 
       expect(result.isSuccess).toBe(false);
     });
   });
 
-  describe("Link.reconstitute", () => {
-    it("should reconstitute link from stored data", () => {
-      const link = Link.reconstitute({
+  describe("Link.incrementVisitCount", () => {
+    it("should increment visit count", () => {
+      const link = new Link({
         slug: "test-slug",
         url: "https://example.com",
-        creationDate: 1234567890,
-        visitCount: 42,
+        visitCount: 5,
       });
 
-      expect(link.slug).toBe("test-slug");
-      expect(link.url).toBe("https://example.com");
+      link.incrementVisitCount();
+
+      expect(link.visitCount).toBe(6);
+    });
+
+    it("should start from 0 and increment", () => {
+      const link = new Link({
+        slug: "test-slug",
+        url: "https://example.com",
+      });
+
+      link.incrementVisitCount();
+      link.incrementVisitCount();
+
+      expect(link.visitCount).toBe(2);
     });
   });
 
   describe("toJSON", () => {
     it("should serialize link correctly", () => {
-      const result = Link.create({
+      const result = Link.instanceForCreate({
         slug: "test-slug",
         url: "https://example.com",
       });
@@ -122,6 +144,7 @@ describe("Link Domain", () => {
         slug: "test-slug",
         url: "https://example.com",
         creationDate: expect.any(Number),
+        lastUpdateDate: expect.any(Number),
         visitCount: 0,
       });
     });

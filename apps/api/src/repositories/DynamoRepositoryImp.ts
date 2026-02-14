@@ -12,26 +12,32 @@ import {
   ScanCommand,
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { IRepository } from "./IRepository";
-import { LinkType, Result } from "@shortlink/core";
+import { Repository } from "./Repository";
+import { Result } from "@shortlink/core";
 
-export class DynamoRepositoryImp implements IRepository {
-  private readonly tableName: string;
+interface DynamoRepositoryImpProps {
+  readonly tableName?: string;
+}
 
-  constructor(tableName: string) {
-    this.tableName = tableName;
+export class DynamoRepositoryImp implements Repository {
+  constructor(private readonly props: DynamoRepositoryImpProps) {
+    if (!this.props.tableName) {
+      throw new Error("Table name is required for " + this.constructor.name);
+    }
   }
 
-  async createLink(link: Link): Promise<Result<void, Error>> {
+  async create(link: Link): Promise<Result<Link, Error>> {
     try {
+      const request = new Link({ ...link, creationDate: Date.now(), visitCount: 0 });
+
       await dynamoClient.send(
         new PutCommand({
-          TableName: this.tableName,
-          Item: link.toJSON(),
+          TableName: this.props.tableName,
+          Item: request.toJSON(),
           ConditionExpression: "attribute_not_exists(slug)",
         }),
       );
-      return Result.ok();
+      return Result.ok(new Link({ ...request }));
     } catch (error) {
       if (
         error instanceof Error &&
@@ -41,15 +47,15 @@ export class DynamoRepositoryImp implements IRepository {
       }
 
       return Result.fail(
-        new Error(`Error creating link in DynamoDB: ${error}`),
+        new Error(`Error creating Link in DynamoDB: ${error}`),
       );
     }
   }
 
-  async getLink(slug: string): Promise<Result<Link, Error>> {
+  async getBySlug(slug: string): Promise<Result<Link, Error>> {
     const { Item: link } = await dynamoClient.send(
       new GetCommand({
-        TableName: this.tableName,
+        TableName: this.props.tableName,
         Key: { slug: slug },
       }),
     );
@@ -58,36 +64,14 @@ export class DynamoRepositoryImp implements IRepository {
       return Result.fail(new LinkNotFoundError(slug));
     }
 
-    return Result.ok(Link.reconstitute(link as LinkType));
+    return Result.ok(new Link({ ...link }));
   }
 
-  async incrementLinkVisitCount(slug: string): Promise<Result<number, Error>> {
-    try {
-      const { Attributes } = await dynamoClient.send(
-        new UpdateCommand({
-          TableName: this.tableName,
-          Key: { slug: slug },
-          UpdateExpression:
-            "SET visitCount = if_not_exists(visitCount, :start) + :inc",
-          ExpressionAttributeValues: {
-            ":inc": 1,
-            ":start": 0,
-          },
-          ReturnValues: "ALL_NEW",
-        }),
-      );
-      return Result.ok(Number(Attributes?.visitCount) || 0);
-    } catch (error) {
-      return Result.fail(
-        new Error(`Error incrementing visit count in DynamoDB: ${error}`),
-      );
-    }
-  }
-  async getAllLinks(): Promise<Result<Link[], Error>> {
+  async getAll(): Promise<Result<Link[], Error>> {
     try {
       const { Items: links } = await dynamoClient.send(
         new ScanCommand({
-          TableName: this.tableName,
+          TableName: this.props.tableName,
         }),
       );
 
@@ -96,7 +80,7 @@ export class DynamoRepositoryImp implements IRepository {
       }
 
       return Result.ok(
-        links.map((link: unknown) => Link.reconstitute(link as LinkType)),
+        links.map((link: unknown) => new Link(link as Partial<Link>)),
       );
     } catch (error) {
       return Result.fail(
@@ -105,12 +89,12 @@ export class DynamoRepositoryImp implements IRepository {
     }
   }
 
-  async deleteLink(slug: string): Promise<Result<void, Error>> {
+  async delete(link: Link): Promise<Result<void, Error>> {
     try {
       await dynamoClient.send(
         new DeleteCommand({
-          TableName: this.tableName,
-          Key: { slug: slug },
+          TableName: this.props.tableName,
+          Key: { slug: link.slug },
           ConditionExpression: "attribute_exists(slug)",
         }),
       );
@@ -120,42 +104,49 @@ export class DynamoRepositoryImp implements IRepository {
         error instanceof Error &&
         error.name === "ConditionalCheckFailedException"
       ) {
-        return Result.fail(new SlugNotFoundError(slug));
+        return Result.fail(new SlugNotFoundError(link.slug));
       }
 
       return Result.fail(
-        new Error(`Error deleting link in DynamoDB: ${error}`),
+        new Error(`Error deleting Link in DynamoDB: ${error}`),
       );
     }
   }
 
-  async updateLink(slug: string, newUrl: string): Promise<Result<void, Error>> {
+  async update(link: Link): Promise<Result<Link, Error>> {
     try {
+      const request = new Link({ ...link, lastUpdateDate: Date.now() });
+
       await dynamoClient.send(
         new UpdateCommand({
-          TableName: this.tableName,
-          Key: { slug: slug },
-          UpdateExpression: "SET #url = :newUrl",
+          TableName: this.props.tableName,
+          Key: { slug: request.slug },
+          UpdateExpression:
+            "SET #url = :url, #lastUpdateDate = :lastUpdateDate, #visitCount = :visitCount",
           ExpressionAttributeNames: {
             "#url": "url",
+            "#lastUpdateDate": "lastUpdateDate",
+            "#visitCount": "visitCount",
           },
           ExpressionAttributeValues: {
-            ":newUrl": newUrl,
+            ":url": request.url,
+            ":lastUpdateDate": request.lastUpdateDate,
+            ":visitCount": request.visitCount,
           },
           ConditionExpression: "attribute_exists(slug)",
         }),
       );
-      return Result.ok();
+      return Result.ok(request);
     } catch (error) {
       if (
         error instanceof Error &&
         error.name === "ConditionalCheckFailedException"
       ) {
-        return Result.fail(new SlugNotFoundError(slug));
+        return Result.fail(new SlugNotFoundError(link.slug));
       }
 
       return Result.fail(
-        new Error(`Error updating link in DynamoDB: ${error}`),
+        new Error(`Error updating Link in DynamoDB: ${error}`),
       );
     }
   }

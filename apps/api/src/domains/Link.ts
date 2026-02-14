@@ -1,11 +1,12 @@
-import { LinkType, Result } from "@shortlink/core";
+import { Result } from "@shortlink/core";
 import z, { ZodError } from "zod";
+import th from "zod/v4/locales/th.js";
 
 const urlValidationSchema = z.object({
-  url: z.string().url(),
+  url: z.url(),
 });
 
-const linkValidationSchema = z.object({
+const createSchema = z.object({
   slug: z
     .string()
     .min(2)
@@ -19,63 +20,53 @@ const linkValidationSchema = z.object({
 });
 
 export class Link {
-  private readonly _slug: string;
-  private readonly _url: string;
-  private readonly _creationDate: number;
-  private readonly _visitCount: number;
+  slug!: string;
+  url!: string
+  creationDate!: number;
+  lastUpdateDate!: number;
+  visitCount!: number;
 
-  private constructor(object: LinkType) {
-    this._slug = object.slug;
-    this._url = object.url;
-    this._creationDate = object.creationDate;
-    this._visitCount = object.visitCount;
+  constructor(object?: Partial<Link>) {
+    if (object) {
+      Object.assign(this, object);
+    }
   }
 
-  static create({
-    slug,
-    url,
-  }: {
-    slug: string;
-    url: string;
-  }): Result<Link, ZodError> {
-    const { error, data } = linkValidationSchema.safeParse({ slug, url });
+  static instanceForCreate(object: Partial<Link>): Result<Link, ZodError> {
+    const { error, data } = createSchema.safeParse(object);
 
     if (error) {
       return Result.fail(error);
     }
 
-    return Result.ok(
-      new Link({ ...data, creationDate: Date.now(), visitCount: 0 }),
-    );
+    return Result.ok(new Link({ ...(data as Partial<Link>) }));
   }
 
-  static update(url: string): Result<string, ZodError> {
-    const { error, data } = urlValidationSchema.safeParse({ url });
+  updateUrl(newUrl: unknown): Result<{ isNeedUpdate: boolean; link: Link }, ZodError> {
+    if (this.url === newUrl) {
+      return Result.ok({ isNeedUpdate: false, link: this });
+    }
+
+    const { error } = urlValidationSchema.safeParse({ url: newUrl });
+
     if (error) {
       return Result.fail(error);
     }
 
-    return Result.ok(data.url);
+    return Result.ok({ isNeedUpdate: true, link: new Link({ ...this, url: newUrl }) });
   }
 
-  static reconstitute(object: LinkType): Link {
-    return new Link(object);
-  }
-
-  get slug(): string {
-    return this._slug;
-  }
-
-  get url(): string {
-    return this._url;
+  incrementVisitCount(): void {
+    this.visitCount += 1;
   }
 
   toJSON() {
     return {
       slug: this.slug,
       url: this.url,
-      creationDate: this._creationDate,
-      visitCount: this._visitCount,
+      creationDate: this.creationDate,
+      lastUpdateDate: this.lastUpdateDate,
+      visitCount: this.visitCount,
     };
   }
 }

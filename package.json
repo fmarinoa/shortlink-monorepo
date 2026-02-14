@@ -1,7 +1,7 @@
 {
   "name": "shortlink-monorepo",
   "description": "Monorepo for Shortlink application",
-  "version": "1.4.4",
+  "version": "2.0.0",
   "scripts": {
     "dev:web": "pnpm --filter shortlink-web run dev",
     "build:web": "pnpm --filter shortlink-web run build",
@@ -9,7 +9,8 @@
     "deploy:api:dev": "pnpm --filter shortlink-api run deploy:dev",
     "deploy:api:prod": "pnpm --filter shortlink-api run deploy:prod",
     "lint": "pnpm -r run lint",
-    "prettier": "pnpm -r run prettier"
+    "prettier": "pnpm -r run prettier",
+    "test": "pnpm -r run test"
   },
   "author": {
     "name": "Franco Mariño",

@@ -1,5 +1,5 @@
 import { DynamoRepositoryImp } from "@/repositories/DynamoRepositoryImp";
-import { Link, SlugAlreadyExistsError, SlugNotFoundError } from "@/domains";
+import { SlugAlreadyExistsError, SlugNotFoundError, Link, LinkNotFoundError } from "@/domains";
 import { dynamoClient } from "@/lib";
 import {
   PutCommand,
@@ -20,54 +20,61 @@ describe("DynamoRepositoryImp", () => {
   const tableName = "TestTable";
 
   beforeEach(() => {
-    repository = new DynamoRepositoryImp(tableName);
+    repository = new DynamoRepositoryImp({ tableName });
     jest.clearAllMocks();
   });
 
-  describe("createLink", () => {
+  describe("create", () => {
     it("should create link successfully", async () => {
-      const link = Link.create({
+      const linkResult = Link.instanceForCreate({
         slug: "test",
         url: "https://example.com",
-      }).getValue();
+      });
+      
+      const link = linkResult.getValue();
 
       (dynamoClient.send as jest.Mock).mockResolvedValue({});
 
-      const result = await repository.createLink(link);
+      const result = await repository.create(link);
 
       expect(result.isSuccess).toBe(true);
+      expect(result.getValue().slug).toBe("test");
       expect(dynamoClient.send).toHaveBeenCalledWith(
         expect.any(PutCommand),
       );
     });
 
     it("should fail when slug already exists", async () => {
-      const link = Link.create({
+      const linkResult = Link.instanceForCreate({
         slug: "test",
         url: "https://example.com",
-      }).getValue();
+      });
+      
+      const link = linkResult.getValue();
 
       const error = new Error("Conditional check failed");
       error.name = "ConditionalCheckFailedException";
       (dynamoClient.send as jest.Mock).mockRejectedValue(error);
 
-      const result = await repository.createLink(link);
+      const result = await repository.create(link);
 
       expect(result.isSuccess).toBe(false);
       expect(result.getErrorValue()).toBeInstanceOf(SlugAlreadyExistsError);
     });
 
     it("should fail with generic error on other errors", async () => {
-      const link = Link.create({
+      const linkResult = Link.instanceForCreate({
         slug: "test",
         url: "https://example.com",
-      }).getValue();
+      });
+      
+      const link = linkResult.getValue();
 
       (dynamoClient.send as jest.Mock).mockRejectedValue(
         new Error("DynamoDB error"),
       );
 
-      const result = await repository.createLink(link);
+      const result = await repository.create(link);
 
       expect(result.isSuccess).toBe(false);
       expect(result.getErrorValue().message).toContain(
@@ -76,7 +83,7 @@ describe("DynamoRepositoryImp", () => {
     });
   });
 
-  describe("getLink", () => {
+  describe("getBySlug", () => {
     it("should get link successfully", async () => {
       const linkData = {
         slug: "test",
@@ -87,7 +94,7 @@ describe("DynamoRepositoryImp", () => {
 
       (dynamoClient.send as jest.Mock).mockResolvedValue({ Item: linkData });
 
-      const result = await repository.getLink("test");
+      const result = await repository.getBySlug("test");
 
       expect(result.isSuccess).toBe(true);
       expect(result.getValue().slug).toBe("test");
@@ -97,40 +104,14 @@ describe("DynamoRepositoryImp", () => {
     it("should fail when link not found", async () => {
       (dynamoClient.send as jest.Mock).mockResolvedValue({});
 
-      const result = await repository.getLink("test");
+      const result = await repository.getBySlug("test");
 
       expect(result.isSuccess).toBe(false);
-      expect(result.getErrorValue().message).toContain("not found");
+      expect(result.getErrorValue()).toBeInstanceOf(LinkNotFoundError);
     });
   });
 
-  describe("incrementLinkVisitCount", () => {
-    it("should increment visit count successfully", async () => {
-      (dynamoClient.send as jest.Mock).mockResolvedValue({
-        Attributes: { visitCount: 6 },
-      });
-
-      const result = await repository.incrementLinkVisitCount("test");
-
-      expect(result.isSuccess).toBe(true);
-      expect(result.getValue()).toBe(6);
-      expect(dynamoClient.send).toHaveBeenCalledWith(
-        expect.any(UpdateCommand),
-      );
-    });
-
-    it("should handle errors when incrementing", async () => {
-      (dynamoClient.send as jest.Mock).mockRejectedValue(
-        new Error("DynamoDB error"),
-      );
-
-      const result = await repository.incrementLinkVisitCount("test");
-
-      expect(result.isSuccess).toBe(false);
-    });
-  });
-
-  describe("getAllLinks", () => {
+  describe("getAll", () => {
     it("should get all links successfully", async () => {
       const links = [
         {
@@ -149,7 +130,7 @@ describe("DynamoRepositoryImp", () => {
 
       (dynamoClient.send as jest.Mock).mockResolvedValue({ Items: links });
 
-      const result = await repository.getAllLinks();
+      const result = await repository.getAll();
 
       expect(result.isSuccess).toBe(true);
       expect(result.getValue()).toHaveLength(2);
@@ -159,18 +140,33 @@ describe("DynamoRepositoryImp", () => {
     it("should return empty array when no links", async () => {
       (dynamoClient.send as jest.Mock).mockResolvedValue({});
 
-      const result = await repository.getAllLinks();
+      const result = await repository.getAll();
 
       expect(result.isSuccess).toBe(true);
       expect(result.getValue()).toEqual([]);
     });
+
+    it("should handle errors when getting all links", async () => {
+      (dynamoClient.send as jest.Mock).mockRejectedValue(
+        new Error("DynamoDB error"),
+      );
+
+      const result = await repository.getAll();
+
+      expect(result.isSuccess).toBe(false);
+      expect(result.getErrorValue().message).toContain(
+        "Error retrieving all links from DynamoDB",
+      );
+    });
   });
 
-  describe("deleteLink", () => {
+  describe("delete", () => {
     it("should delete link successfully", async () => {
+      const link = new Link({ slug: "test", url: "https://example.com" });
+
       (dynamoClient.send as jest.Mock).mockResolvedValue({});
 
-      const result = await repository.deleteLink("test");
+      const result = await repository.delete(link);
 
       expect(result.isSuccess).toBe(true);
       expect(dynamoClient.send).toHaveBeenCalledWith(
@@ -179,38 +175,87 @@ describe("DynamoRepositoryImp", () => {
     });
 
     it("should fail when slug not found", async () => {
+      const link = new Link({ slug: "test", url: "https://example.com" });
+
       const error = new Error("Conditional check failed");
       error.name = "ConditionalCheckFailedException";
       (dynamoClient.send as jest.Mock).mockRejectedValue(error);
 
-      const result = await repository.deleteLink("test");
+      const result = await repository.delete(link);
 
       expect(result.isSuccess).toBe(false);
       expect(result.getErrorValue()).toBeInstanceOf(SlugNotFoundError);
     });
+
+    it("should fail with generic error on other errors", async () => {
+      const link = new Link({ slug: "test", url: "https://example.com" });
+
+      (dynamoClient.send as jest.Mock).mockRejectedValue(
+        new Error("DynamoDB error"),
+      );
+
+      const result = await repository.delete(link);
+
+      expect(result.isSuccess).toBe(false);
+      expect(result.getErrorValue().message).toContain(
+        "Error deleting link in DynamoDB",
+      );
+    });
   });
 
-  describe("updateLink", () => {
+  describe("update", () => {
     it("should update link successfully", async () => {
+      const link = new Link({ 
+        slug: "test", 
+        url: "https://new-url.com",
+        visitCount: 5,
+        creationDate: Date.now()
+      });
+
       (dynamoClient.send as jest.Mock).mockResolvedValue({});
 
-      const result = await repository.updateLink("test", "https://new-url.com");
+      const result = await repository.update(link);
 
       expect(result.isSuccess).toBe(true);
+      expect(result.getValue().slug).toBe("test");
+      expect(result.getValue().url).toBe("https://new-url.com");
       expect(dynamoClient.send).toHaveBeenCalledWith(
         expect.any(UpdateCommand),
       );
     });
 
     it("should fail when slug not found", async () => {
+      const link = new Link({ 
+        slug: "test", 
+        url: "https://new-url.com" 
+      });
+
       const error = new Error("Conditional check failed");
       error.name = "ConditionalCheckFailedException";
       (dynamoClient.send as jest.Mock).mockRejectedValue(error);
 
-      const result = await repository.updateLink("test", "https://new-url.com");
+      const result = await repository.update(link);
 
       expect(result.isSuccess).toBe(false);
       expect(result.getErrorValue()).toBeInstanceOf(SlugNotFoundError);
+    });
+
+    it("should fail with generic error on other errors", async () => {
+      const link = new Link({ 
+        slug: "test", 
+        url: "https://new-url.com" 
+      });
+
+      (dynamoClient.send as jest.Mock).mockRejectedValue(
+        new Error("DynamoDB error"),
+      );
+
+      const result = await repository.update(link);
+
+      expect(result.isSuccess).toBe(false);
+      expect(result.getErrorValue().message).toContain(
+        "Error updating link in DynamoDB",
+      );
     });
   });
 });

@@ -22,7 +22,7 @@ provider:
     DOMAIN: ${self:custom.domain}
     API_URL: ${self:custom.apiUrl.${self:provider.stage}}
     AWS_STAGE: ${self:provider.stage}
-    CORS_ALLOWED_ORIGINS: ${env:CORS_ALLOWED_ORIGINS}
+    CORS_ALLOWED_ORIGINS: ${env:CORS_ALLOWED_ORIGINS, '*'}
   iam:
     role:
       statements:

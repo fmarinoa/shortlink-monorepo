@@ -1,2 +1,2 @@
-export * from "./requireBody";
+export * from "./validators";
 export * from "./cors";

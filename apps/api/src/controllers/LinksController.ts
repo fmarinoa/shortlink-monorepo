@@ -1,10 +1,14 @@
 import { SlugAlreadyExistsError, SlugNotFoundError } from "@/domains";
 import { Link } from "@/domains/Link";
-import { ILinksServices } from "@/services/ILinksServices";
+import { LinksService } from "@/services/LinksService";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 
+interface LinksControllerProps {
+  readonly linksService: LinksService;
+}
+
 export class LinksController {
-  constructor(private readonly linksService: ILinksServices) {}
+  constructor(private readonly props: LinksControllerProps) {}
 
   async createLink(
     event: APIGatewayProxyEvent,
@@ -15,19 +19,19 @@ export class LinksController {
         url: string;
       };
 
-      const linkResult = Link.create({ slug, url });
+      const link = Link.instanceForCreate({ slug, url });
 
-      if (!linkResult.isSuccess) {
+      if (!link.isSuccess) {
         return {
           statusCode: 400,
           body: JSON.stringify({
             message: "Invalid link data",
-            errors: linkResult.getErrorValue().issues,
+            errors: link.getErrorValue().issues,
           }),
         };
       }
 
-      const result = await this.linksService.createLink(linkResult.getValue());
+      const result = await this.props.linksService.createLink(link.getValue());
       if (!result.isSuccess) {
         const error = result.getErrorValue();
         const message = error.message;
@@ -74,7 +78,9 @@ export class LinksController {
       };
     };
 
-    const result = await this.linksService.redirectLink(slug);
+    const result = await this.props.linksService.redirectLink(
+      new Link({ slug: slug }),
+    );
 
     if (!result.isSuccess) {
       return buildRedirectResponse(result.getErrorValue());
@@ -86,7 +92,7 @@ export class LinksController {
   async getAllLinks(
     _event: APIGatewayProxyEvent,
   ): Promise<APIGatewayProxyResult> {
-    const result = await this.linksService.getAllLinks();
+    const result = await this.props.linksService.getAllLinks();
 
     if (!result.isSuccess) {
       return {
@@ -106,16 +112,7 @@ export class LinksController {
   ): Promise<APIGatewayProxyResult> {
     const { slug } = event.pathParameters || {};
 
-    if (!slug) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({
-          message: "Slug is required in path parameters",
-        }),
-      };
-    }
-
-    const result = await this.linksService.deleteLink(slug);
+    const result = await this.props.linksService.deleteLink(new Link({ slug }));
 
     if (!result.isSuccess) {
       const error = result.getErrorValue();
@@ -144,36 +141,12 @@ export class LinksController {
   ): Promise<APIGatewayProxyResult> {
     try {
       const { slug } = event.pathParameters || {};
+      const { url } = event.body as unknown as { url: unknown };
 
-      if (!slug) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({
-            message: "Slug is required in path parameters",
-          }),
-        };
-      }
-
-      const { url } = event.body as unknown as {
-        url: string;
-      };
-
-      const updatedLink = Link.update(url);
-
-      if (!updatedLink.isSuccess) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({
-            message: "Invalid new link data",
-            errors: updatedLink.getErrorValue().issues,
-          }),
-        };
-      }
-
-      const result = await this.linksService.updateLink(
-        slug,
-        updatedLink.getValue(),
-      );
+      const result = await this.props.linksService.updateLink({
+        link: new Link({ slug }),
+        newUrl: url,
+      });
 
       if (!result.isSuccess) {
         const error = result.getErrorValue();
