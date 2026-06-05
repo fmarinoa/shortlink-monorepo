@@ -11,6 +11,11 @@ import Toast from "./components/Toast";
 import QrModal from "./components/QrModal";
 import { copyToClipboard, getErrorMessage } from "./utils";
 
+type QrModalData = {
+  slug: string;
+  shortUrl: string;
+};
+
 function App() {
   const { data: links, isLoading, isError, error } = useLinks();
   const { createLink, deleteLink, updateLink } = useLinkMutations();
@@ -27,9 +32,7 @@ function App() {
   const [toastType, setToastType] = useState<"success" | "error">("success");
   const [formData, setFormData] = useState({ slug: "", url: "" });
   const [isModalApiKeyOpen, setIsModalApiKeyOpen] = useState(false);
-  const [qrData, setQrData] = useState<{ slug: string; shortUrl: string } | null>(
-    null,
-  );
+  const [qrData, setQrData] = useState<QrModalData | null>(null);
 
   if (isError) {
     console.error("Error fetching links:", error);

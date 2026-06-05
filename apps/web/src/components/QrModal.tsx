@@ -19,7 +19,7 @@ export default function QrModal({
   onCopyLink,
   onShowToast,
 }: QrModalProps) {
-  const qrContainerRef = useRef<HTMLDivElement>(null);
+  const qrRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -37,7 +37,7 @@ export default function QrModal({
   if (!isOpen) return null;
 
   const downloadQr = () => {
-    const svgElement = qrContainerRef.current?.querySelector("svg");
+    const svgElement = qrRef.current?.querySelector("svg");
     if (!svgElement) {
       onShowToast("No se pudo descargar el QR", "error");
       return;
@@ -61,10 +61,14 @@ export default function QrModal({
     onShowToast("✅ QR descargado", "success");
   };
 
+  const copyLinkForShare = () => {
+    onCopyLink(shortUrl);
+    onShowToast("✅ Link copiado para compartir", "success");
+  };
+
   const shareQr = async () => {
     if (!navigator.share) {
-      onCopyLink(shortUrl);
-      onShowToast("✅ Link copiado para compartir", "success");
+      copyLinkForShare();
       return;
     }
 
@@ -75,8 +79,13 @@ export default function QrModal({
         url: shortUrl,
       });
       onShowToast("✅ Link compartido", "success");
-    } catch {
-      // User canceled share modal
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+
+      console.error("Error sharing shortlink:", error);
+      copyLinkForShare();
     }
   };
 
@@ -108,7 +117,7 @@ export default function QrModal({
         </div>
 
         <div className="bg-white rounded-xl p-4 flex justify-center mb-4">
-          <div ref={qrContainerRef}>
+          <div ref={qrRef}>
             <QRCodeSVG value={shortUrl} size={220} level="M" includeMargin />
           </div>
         </div>
