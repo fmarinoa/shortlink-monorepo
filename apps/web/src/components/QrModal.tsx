@@ -82,6 +82,7 @@ export default function QrModal({
     } catch (error) {
       // Ignore user-initiated share dialog cancellation.
       if (error instanceof DOMException && error.name === "AbortError") {
+        onShowToast("Compartir cancelado", "success");
         return;
       }
 

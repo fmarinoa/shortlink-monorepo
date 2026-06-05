@@ -2,6 +2,7 @@ packages:
   - 'apps/*'
   - 'packages/*'
 allowBuilds:
+  # Required to run postinstall/native scripts under pnpm's build-approval policy.
   esbuild: true
   serverless: true
   unrs-resolver: true
