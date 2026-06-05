@@ -8,6 +8,7 @@ import SearchBar from "./components/SearchBar";
 import LinkTable from "./components/LinkTable";
 import LinkModal from "./components/LinkModal";
 import Toast from "./components/Toast";
+import QrModal from "./components/QrModal";
 import { copyToClipboard, getErrorMessage } from "./utils";
 
 function App() {
@@ -26,6 +27,9 @@ function App() {
   const [toastType, setToastType] = useState<"success" | "error">("success");
   const [formData, setFormData] = useState({ slug: "", url: "" });
   const [isModalApiKeyOpen, setIsModalApiKeyOpen] = useState(false);
+  const [qrData, setQrData] = useState<{ slug: string; shortUrl: string } | null>(
+    null,
+  );
 
   if (isError) {
     console.error("Error fetching links:", error);
@@ -108,6 +112,10 @@ function App() {
     showToastMessage("✅ API Key guardada correctamente", "success");
   };
 
+  const handleOpenQr = (shortUrl: string, slug: string) => {
+    setQrData({ slug, shortUrl });
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-8">
       <Header
@@ -126,6 +134,7 @@ function App() {
           copyToClipboard(text, setShowToast);
           showToastMessage("✅ Link copiado al portapapeles", "success");
         }}
+        onShowQr={handleOpenQr}
       />
 
       <LinkModal
@@ -149,6 +158,15 @@ function App() {
           onClose={() => setIsModalApiKeyOpen(false)}
         />
       )}
+
+      <QrModal
+        isOpen={Boolean(qrData)}
+        slug={qrData?.slug || ""}
+        shortUrl={qrData?.shortUrl || ""}
+        onClose={() => setQrData(null)}
+        onCopyLink={(text) => copyToClipboard(text, setShowToast)}
+        onShowToast={showToastMessage}
+      />
 
       <Toast show={showToast} message={toastMessage} type={toastType} />
     </div>
