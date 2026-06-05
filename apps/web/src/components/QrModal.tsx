@@ -39,7 +39,7 @@ export default function QrModal({
   const downloadQr = () => {
     const svgElement = qrRef.current?.querySelector("svg");
     if (!svgElement) {
-      onShowToast("No se pudo descargar el QR", "error");
+      onShowToast("No se encontró el código QR para descargar", "error");
       return;
     }
 
@@ -80,6 +80,7 @@ export default function QrModal({
       });
       onShowToast("✅ Link compartido", "success");
     } catch (error) {
+      // Ignore user-initiated share dialog cancellation.
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
       }
