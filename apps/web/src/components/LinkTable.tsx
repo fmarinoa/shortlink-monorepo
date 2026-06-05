@@ -3,6 +3,7 @@ import {
   Pencil,
   Trash2,
   Copy,
+  QrCode,
   ExternalLink,
   BarChart2,
 } from "lucide-react";
@@ -16,6 +17,7 @@ interface LinkTableProps {
   onEdit: (link: LinkType) => void;
   onDelete: (slug: string) => void;
   onCopyLink: (url: string) => void;
+  onShowQr: (url: string, slug: string) => void;
 }
 
 export default function LinkTable({
@@ -24,6 +26,7 @@ export default function LinkTable({
   onEdit,
   onDelete,
   onCopyLink,
+  onShowQr,
 }: LinkTableProps) {
   const fullLink = (slug: string) => `${VITE_API_URL}/${slug}`;
 
@@ -134,6 +137,15 @@ export default function LinkTable({
                         title="Editar"
                       >
                         <Pencil size={18} />
+                      </button>
+                      <button
+                        onClick={() =>
+                          onShowQr(fullLink(link.slug), link.slug)
+                        }
+                        className="p-2 text-slate-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition-colors"
+                        title="Ver QR"
+                      >
+                        <QrCode size={18} />
                       </button>
                       <button
                         onClick={() => onDelete(link.slug)}
