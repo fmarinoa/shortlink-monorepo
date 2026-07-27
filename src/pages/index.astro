@@ -1,0 +1,924 @@
+---
+import Layout from '../layouts/Layout.astro';
+import links from '../data/links.json';
+
+const sortedLinks = [...links].sort((a, b) => a.slug.localeCompare(b.slug));
+
+const prettyUrl = (url: string) => {
+	try {
+		const u = new URL(url);
+		return u.hostname.replace(/^www\./, '') + (u.pathname !== '/' ? u.pathname : '');
+	} catch {
+		return url;
+	}
+};
+---
+
+<Layout>
+	<main>
+		<header>
+			<h1>francomarino.dev</h1>
+			<p class="subtitle">
+				Acortador de URLs de <a href="https://francomarino.dev" target="_blank" rel="noopener noreferrer">Franco M.</a>
+			</p>
+			<p class="count">
+				<span id="count">{links.length}</span> enlaces disponibles
+			</p>
+		</header>
+
+		<div class="toolbar">
+			<div class="search-wrapper">
+				<svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+					<circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
+					<path d="m20 20-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+				</svg>
+				<input
+					id="search"
+					type="search"
+					aria-label="Buscar enlace"
+					placeholder="Buscar por nombre o destino..."
+					autocomplete="off"
+					spellcheck="false"
+					autofocus
+				/>
+				<kbd class="kbd">/</kbd>
+			</div>
+
+			<div class="sort" role="group" aria-label="Ordenar enlaces">
+				<button type="button" class="sort-btn is-active" data-sort="alpha" aria-pressed="true">
+					A–Z
+				</button>
+				<button type="button" class="sort-btn" data-sort="clicks" aria-pressed="false">
+					Clicks
+				</button>
+				<button type="button" class="sort-btn" data-sort="created" aria-pressed="false">
+					Recientes
+				</button>
+			</div>
+		</div>
+
+		<section class="links" id="links-list">
+			{sortedLinks.map(({ slug, url, created }) => {
+				const target = prettyUrl(url);
+				const createdAt = created ?? '1970-01-01';
+				return (
+					<div
+						class="link-card"
+						data-slug={slug}
+						data-target={target}
+						data-created={createdAt}
+						data-week="0"
+					>
+						<a
+							href={`/${slug}`}
+							class="link-main"
+							target="_blank"
+							rel="nofollow noopener noreferrer"
+						>
+							<span class="link-slug">
+								<span class="domain">francomarino.dev/</span><span class="slug">{slug}</span>
+							</span>
+							<span class="link-target">
+								<svg class="target-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+									<path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+								</svg>
+								<span class="target-url">{target}</span>
+							</span>
+						</a>
+
+						<a
+							href={`/stats/${slug}`}
+							class="analytics"
+							aria-label={`Ver analíticas de francomarino.dev/${slug}`}
+							data-analytics={slug}
+						>
+							<svg class="spark" viewBox="0 0 70 28" width="70" height="28" aria-hidden="true" preserveAspectRatio="none">
+								{/* 7 placeholder bars — filled by client script */}
+								{[0, 1, 2, 3, 4, 5, 6].map((i) => (
+									<g class="spark-hit" data-i={i}>
+										{/* Invisible wider hit target for hover */}
+										<rect class="spark-hitarea" x={i * 10} y={0} width="10" height="28" />
+										<rect
+											class="spark-bar"
+											data-i={i}
+											x={i * 10 + 2}
+											y={24}
+											width="6"
+											height="2"
+											rx="1.5"
+										/>
+									</g>
+								))}
+							</svg>
+							<span class="stat" title="Clicks últimos 7 días">
+								<span class="stat-value" data-week>—</span>
+								<span class="stat-label">7d</span>
+							</span>
+						</a>
+
+						<button class="copy" type="button" data-slug={slug} aria-label={`Copiar enlace ${slug}`}>
+							<svg class="icon-copy" width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+								<rect x="9" y="9" width="11" height="11" rx="2.5" stroke="currentColor" stroke-width="2" />
+								<path d="M5 15V5.5A1.5 1.5 0 0 1 6.5 4H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+							</svg>
+							<svg class="icon-check" width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+								<path d="m5 12 4.5 4.5L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+							</svg>
+						</button>
+					</div>
+				);
+			})}
+		</section>
+
+		<p id="no-results" class="no-results" hidden>
+			No se encontraron enlaces para <span id="query-echo"></span>
+		</p>
+
+		<footer>
+			<a href="https://github.com/midudev/midu.link" target="_blank" rel="noopener noreferrer">
+				Código abierto en GitHub
+			</a>
+		</footer>
+	</main>
+</Layout>
+
+<script>
+	import { $, $$ } from '../lib/dom';
+
+	const search = $<HTMLInputElement>('#search')!;
+	const list = $('#links-list')!;
+	const count = $('#count')!;
+	const noResults = $<HTMLElement>('#no-results')!;
+	const queryEcho = $('#query-echo')!;
+	const sortGroup = $('.sort')!;
+	const cards = () => $$<HTMLElement>('.link-card', list);
+	const total = cards().length;
+
+	type SortMode = 'alpha' | 'clicks' | 'created';
+	const SORT_KEY = 'franco.link.sort';
+	const validSort = (v: string | null): v is SortMode =>
+		v === 'alpha' || v === 'clicks' || v === 'created';
+
+	const runFilter = () => {
+		const query = search.value.trim().toLowerCase();
+		let visible = 0;
+
+		for (const card of cards()) {
+			const slug = card.dataset.slug!.toLowerCase();
+			const target = card.dataset.target!.toLowerCase();
+			const matches = !query || slug.includes(query) || target.includes(query);
+			card.hidden = !matches;
+			if (matches) visible++;
+		}
+
+		count.textContent = String(query ? visible : total);
+		queryEcho.textContent = query ? `"${query}"` : '';
+		noResults.hidden = visible > 0;
+	};
+
+	const applySort = (mode: SortMode) => {
+		const items = cards();
+		items.sort((a, b) => {
+			if (mode === 'clicks') {
+				const wa = Number(a.dataset.week) || 0;
+				const wb = Number(b.dataset.week) || 0;
+				if (wb !== wa) return wb - wa;
+				return a.dataset.slug!.localeCompare(b.dataset.slug!);
+			}
+			if (mode === 'created') {
+				const ca = a.dataset.created ?? '';
+				const cb = b.dataset.created ?? '';
+				if (cb !== ca) return cb.localeCompare(ca); // newest first
+				return a.dataset.slug!.localeCompare(b.dataset.slug!);
+			}
+			// alpha
+			return a.dataset.slug!.localeCompare(b.dataset.slug!);
+		});
+
+		const frag = document.createDocumentFragment();
+		for (const card of items) frag.appendChild(card);
+		list.appendChild(frag);
+		runFilter();
+	};
+
+	const setSort = (mode: SortMode, { persist = true } = {}) => {
+		for (const btn of $$<HTMLButtonElement>('.sort-btn', sortGroup)) {
+			const active = btn.dataset.sort === mode;
+			btn.classList.toggle('is-active', active);
+			btn.setAttribute('aria-pressed', String(active));
+		}
+		if (persist) {
+			try {
+				localStorage.setItem(SORT_KEY, mode);
+			} catch {
+				/* ignore */
+			}
+			const url = new URL(location.href);
+			if (mode === 'alpha') url.searchParams.delete('sort');
+			else url.searchParams.set('sort', mode);
+			history.replaceState(null, '', url);
+		}
+		applySort(mode);
+	};
+
+	sortGroup.addEventListener('click', (e) => {
+		const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.sort-btn');
+		if (!btn?.dataset.sort || !validSort(btn.dataset.sort)) return;
+		setSort(btn.dataset.sort);
+	});
+
+	search.addEventListener('input', runFilter);
+
+	// Prefill from ?q= (enables Google's sitelinks search box → this page)
+	const params = new URLSearchParams(location.search);
+	const initialQuery = params.get('q');
+	if (initialQuery) {
+		search.value = initialQuery;
+	}
+
+	// Sort: URL > localStorage > alpha
+	const initialSort: SortMode = validSort(params.get('sort'))
+		? (params.get('sort') as SortMode)
+		: validSort(localStorage.getItem(SORT_KEY))
+			? (localStorage.getItem(SORT_KEY) as SortMode)
+			: 'alpha';
+	setSort(initialSort, { persist: false });
+	// Sync UI + filter after initial sort
+	runFilter();
+
+	// Keyboard: "/" focuses search, Escape clears it
+	document.addEventListener('keydown', (e) => {
+		if (e.key === '/' && document.activeElement !== search) {
+			e.preventDefault();
+			search.focus();
+			search.select();
+		}
+		if (e.key === 'Escape' && document.activeElement === search) {
+			search.value = '';
+			search.dispatchEvent(new Event('input'));
+			search.blur();
+		}
+	});
+
+	// Copy midu.link/<slug> to clipboard
+	let resetTimer: ReturnType<typeof setTimeout>;
+	list.addEventListener('click', async (e) => {
+		const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.copy');
+		if (!btn) return;
+		e.preventDefault();
+
+		const shortUrl = `${location.origin}/${btn.dataset.slug}`;
+		try {
+			await navigator.clipboard.writeText(shortUrl);
+		} catch {
+			return;
+		}
+
+		for (const el of $$('.copy.copied')) el.classList.remove('copied');
+		clearTimeout(resetTimer);
+		btn.classList.add('copied');
+		resetTimer = setTimeout(() => btn.classList.remove('copied'), 1400);
+	});
+
+	// ---------- Analytics sparklines ----------
+	type DayCount = { day: string; count: number };
+	type SlugStats = { days: DayCount[]; today: number; week: number };
+
+	const SPARK_H = 28;
+	const BAR_MIN = 2;
+	const BAR_MAX = 26;
+
+	const WEEKDAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+	const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+	function formatCount(n: number): string {
+		if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+		if (n >= 10_000) return `${Math.round(n / 1000)}k`;
+		if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+		return String(n);
+	}
+
+	function formatDayLabel(iso: string): string {
+		const d = new Date(`${iso}T12:00:00Z`);
+		if (Number.isNaN(d.getTime())) return iso;
+		return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+	}
+
+	// Shared floating tooltip for spark bars
+	const tip = document.createElement('div');
+	tip.className = 'spark-tooltip';
+	tip.hidden = true;
+	document.body.appendChild(tip);
+
+	let tipHide: ReturnType<typeof setTimeout> | undefined;
+
+	function showTip(anchor: Element, html: string) {
+		clearTimeout(tipHide);
+		tip.innerHTML = html;
+		tip.hidden = false;
+		const r = anchor.getBoundingClientRect();
+		const tw = tip.offsetWidth;
+		const th = tip.offsetHeight;
+		let left = r.left + r.width / 2 - tw / 2;
+		left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
+		const top = r.top - th - 8 + scrollY;
+		tip.style.left = `${left}px`;
+		tip.style.top = `${top}px`;
+	}
+
+	function hideTip() {
+		tipHide = setTimeout(() => {
+			tip.hidden = true;
+		}, 40);
+	}
+
+	function paintSpark(root: HTMLElement, stats: SlugStats) {
+		const counts = stats.days.map((d) => d.count);
+		const max = Math.max(...counts, 1);
+
+		for (const bar of $$<SVGRectElement>('.spark-bar', root)) {
+			const i = Number(bar.dataset.i);
+			const day = stats.days[i];
+			const value = day?.count ?? 0;
+			const h = value === 0 ? BAR_MIN : Math.max(BAR_MIN, Math.round((value / max) * BAR_MAX));
+			bar.setAttribute('y', String(SPARK_H - h));
+			bar.setAttribute('height', String(h));
+			bar.classList.toggle('is-today', i === counts.length - 1);
+			bar.classList.toggle('has-clicks', value > 0);
+		}
+
+		for (const hit of $$<SVGGElement>('.spark-hit', root)) {
+			const i = Number(hit.dataset.i);
+			const day = stats.days[i];
+			if (!day) continue;
+			const label = formatDayLabel(day.day);
+			const clicks = day.count;
+			const isToday = i === stats.days.length - 1;
+
+			hit.addEventListener('pointerenter', () => {
+				$('.spark-bar', hit)!.classList.add('is-hover');
+				showTip(
+					hit,
+					`<strong>${formatCount(clicks)}</strong> click${clicks === 1 ? '' : 's'}` +
+						`<span>${label}${isToday ? ' · hoy' : ''}</span>`,
+				);
+			});
+			hit.addEventListener('pointerleave', () => {
+				$('.spark-bar', hit)?.classList.remove('is-hover');
+				hideTip();
+			});
+		}
+
+		const weekEl = $('[data-week]', root);
+		if (weekEl) weekEl.textContent = formatCount(stats.week);
+
+		root.classList.add('is-loaded');
+	}
+
+	async function loadStats() {
+		try {
+			const res = await fetch('/api/stats');
+			if (!res.ok) return;
+			const data = (await res.json()) as Record<string, SlugStats>;
+
+			for (const card of cards()) {
+				const slug = card.dataset.slug!;
+				const panel = $<HTMLElement>('[data-analytics]', card);
+				if (!panel) continue;
+				const stats = data[slug] ?? {
+					days: Array.from({ length: 7 }, (_, i) => ({ day: String(i), count: 0 })),
+					today: 0,
+					week: 0,
+				};
+				card.dataset.week = String(stats.week);
+				paintSpark(panel, stats);
+			}
+
+			// Re-apply when sorting by clicks so numbers land in the right order
+			const active = $<HTMLButtonElement>('.sort-btn.is-active', sortGroup);
+			if (active?.dataset.sort === 'clicks') applySort('clicks');
+		} catch {
+			// Stats are progressive enhancement — ignore failures.
+		}
+	}
+
+	loadStats();
+</script>
+
+<style>
+	main {
+		max-width: 920px;
+		margin: 0 auto;
+		padding: 4rem 1.5rem 3rem;
+	}
+
+	/* ---------- Header ---------- */
+	header {
+		text-align: center;
+		margin-bottom: 2.5rem;
+	}
+
+	h1 {
+		font-family: var(--pixel);
+		font-size: clamp(2.75rem, 11vw, 4.25rem);
+		font-weight: 400;
+		line-height: 1;
+		letter-spacing: 0.01em;
+		color: var(--text);
+		margin-bottom: 1.1rem;
+	}
+
+	.subtitle {
+		color: var(--muted);
+		font-size: 0.9rem;
+	}
+
+	.subtitle a {
+		color: var(--text);
+		text-decoration: none;
+		border-bottom: 1px solid var(--border-hover);
+		transition: border-color 0.15s, color 0.15s;
+	}
+
+	.subtitle a:hover {
+		color: var(--accent);
+		border-color: var(--accent);
+	}
+
+	.count {
+		margin-top: 0.9rem;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4ch;
+		padding: 0.3rem 0.7rem;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: var(--surface);
+		color: var(--muted);
+		font-size: 0.72rem;
+		letter-spacing: 0.02em;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.count #count {
+		color: var(--text);
+		font-weight: 600;
+	}
+
+	/* ---------- Toolbar: search + sort ---------- */
+	.toolbar {
+		position: sticky;
+		top: 0.75rem;
+		z-index: 10;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: stretch;
+		gap: 0.55rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.search-wrapper {
+		flex: 1 1 16rem;
+		min-width: 0;
+		display: flex;
+		align-items: center;
+		gap: 0.65rem;
+		padding: 0 0.9rem;
+		border-radius: var(--radius);
+		background: rgba(16, 16, 16, 0.85);
+		border: 1px solid var(--border);
+		backdrop-filter: blur(12px);
+		transition: border-color 0.15s, box-shadow 0.15s;
+	}
+
+	.sort {
+		flex: 0 0 auto;
+		display: inline-flex;
+		align-items: center;
+		padding: 0.22rem;
+		border-radius: var(--radius);
+		background: rgba(16, 16, 16, 0.85);
+		border: 1px solid var(--border);
+		backdrop-filter: blur(12px);
+		gap: 0.15rem;
+	}
+
+	.sort-btn {
+		appearance: none;
+		border: none;
+		background: transparent;
+		color: var(--muted);
+		font-family: var(--mono);
+		font-size: 0.72rem;
+		font-weight: 500;
+		letter-spacing: 0.01em;
+		padding: 0.55rem 0.75rem;
+		border-radius: calc(var(--radius) - 4px);
+		cursor: pointer;
+		transition: color 0.15s, background 0.15s;
+		white-space: nowrap;
+	}
+
+	.sort-btn:hover {
+		color: var(--text);
+	}
+
+	.sort-btn.is-active {
+		color: var(--text);
+		background: var(--accent-soft);
+		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+	}
+
+	.sort-btn:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 1px;
+	}
+
+	.search-wrapper:focus-within {
+		border-color: var(--accent);
+		box-shadow: 0 0 0 3px var(--accent-soft);
+	}
+
+	.search-icon {
+		flex-shrink: 0;
+		color: var(--dim);
+		transition: color 0.15s;
+	}
+
+	.search-wrapper:focus-within .search-icon {
+		color: var(--accent);
+	}
+
+	#search {
+		flex: 1;
+		width: 100%;
+		padding: 0.85rem 0;
+		background: transparent;
+		border: none;
+		color: var(--text);
+		font-family: var(--mono);
+		font-size: 0.95rem;
+		outline: none;
+	}
+
+	#search::placeholder {
+		color: var(--dim);
+	}
+
+	#search::-webkit-search-cancel-button {
+		-webkit-appearance: none;
+		appearance: none;
+	}
+
+	.kbd {
+		flex-shrink: 0;
+		min-width: 1.6rem;
+		height: 1.6rem;
+		display: grid;
+		place-items: center;
+		border: 1px solid var(--border-hover);
+		border-radius: 6px;
+		background: var(--bg);
+		color: var(--muted);
+		font-family: var(--mono);
+		font-size: 0.8rem;
+	}
+
+	.search-wrapper:focus-within .kbd {
+		opacity: 0;
+	}
+
+	/* ---------- Links ---------- */
+	.links {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.link-card {
+		display: flex;
+		align-items: stretch;
+		border-radius: var(--radius);
+		background: var(--surface);
+		border: 1px solid var(--border);
+		transition: background 0.15s, border-color 0.15s;
+		content-visibility: auto;
+		contain-intrinsic-size: auto 64px;
+	}
+
+	.link-card[hidden] {
+		display: none;
+	}
+
+	.link-card:hover {
+		background: var(--surface-hover);
+		border-color: var(--border-hover);
+	}
+
+	.link-main {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 0.2rem;
+		padding: 0.65rem 1rem 0.65rem 1.2rem;
+		text-decoration: none;
+		color: inherit;
+	}
+
+	.link-slug {
+		font-size: 1rem;
+		line-height: 1.2;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.domain {
+		color: var(--dim);
+	}
+
+	.slug {
+		color: var(--text);
+		font-weight: 600;
+	}
+
+	.link-card:hover .slug {
+		color: var(--accent);
+	}
+
+	.link-target {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		min-width: 0;
+		color: var(--muted);
+		font-size: 0.8rem;
+		line-height: 1.3;
+	}
+
+	.target-arrow {
+		flex-shrink: 0;
+		color: var(--dim);
+		opacity: 0.7;
+		transition: color 0.15s, opacity 0.15s, transform 0.15s;
+	}
+
+	.link-card:hover .target-arrow {
+		color: var(--accent);
+		opacity: 1;
+		transform: translateX(1px);
+	}
+
+	.target-url {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.link-card:hover .target-url {
+		color: color-mix(in srgb, var(--muted) 70%, var(--text));
+	}
+
+	/* ---------- Analytics ---------- */
+	.analytics {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		gap: 0.7rem;
+		padding: 0 0.9rem 0 0.8rem;
+		border-left: 1px solid var(--border);
+		opacity: 0.5;
+		transition: opacity 0.2s, background 0.15s;
+		font-variant-numeric: tabular-nums;
+		text-decoration: none;
+		color: inherit;
+		cursor: pointer;
+	}
+
+	.analytics.is-loaded {
+		opacity: 1;
+	}
+
+	.analytics:hover {
+		background: var(--accent-soft);
+	}
+
+	.spark {
+		display: block;
+		overflow: visible;
+		flex-shrink: 0;
+	}
+
+	.spark-hitarea {
+		fill: transparent;
+		pointer-events: all;
+	}
+
+	.spark-bar {
+		fill: var(--dim);
+		pointer-events: none;
+		transition: y 0.25s ease, height 0.25s ease, fill 0.15s;
+	}
+
+	.spark-bar.has-clicks {
+		fill: color-mix(in srgb, var(--accent) 55%, var(--dim));
+	}
+
+	.spark-bar.is-today {
+		fill: var(--accent);
+	}
+
+	.spark-bar.is-hover {
+		fill: #c4b5fd;
+	}
+
+	.stat {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 0.05rem;
+		line-height: 1.15;
+		min-width: 2.2rem;
+	}
+
+	.stat-value {
+		color: var(--text);
+		font-size: 0.95rem;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+	}
+
+	.stat-label {
+		color: var(--muted);
+		font-size: 0.65rem;
+		text-transform: lowercase;
+	}
+
+	/* ---------- Copy button ---------- */
+	.copy {
+		flex-shrink: 0;
+		width: 3.1rem;
+		display: grid;
+		place-items: center;
+		border: none;
+		border-left: 1px solid var(--border);
+		border-radius: 0 var(--radius) var(--radius) 0;
+		background: transparent;
+		color: var(--dim);
+		cursor: pointer;
+		transition: color 0.15s, background 0.15s;
+	}
+
+	.copy:hover {
+		color: var(--text);
+		background: var(--accent-soft);
+	}
+
+	.copy svg {
+		grid-area: 1 / 1;
+		transition: opacity 0.15s, transform 0.15s;
+	}
+
+	.copy .icon-check {
+		opacity: 0;
+		transform: scale(0.6);
+		color: var(--accent);
+	}
+
+	.copy.copied {
+		color: var(--accent);
+	}
+
+	.copy.copied .icon-copy {
+		opacity: 0;
+		transform: scale(0.6);
+	}
+
+	.copy.copied .icon-check {
+		opacity: 1;
+		transform: scale(1);
+	}
+
+	/* ---------- Empty state + footer ---------- */
+	.no-results {
+		text-align: center;
+		color: var(--muted);
+		padding: 3rem 0;
+		font-size: 0.9rem;
+	}
+
+	.no-results span {
+		color: var(--text);
+	}
+
+	footer {
+		margin-top: 3rem;
+		text-align: center;
+	}
+
+	footer a {
+		color: var(--dim);
+		text-decoration: none;
+		font-size: 0.78rem;
+		transition: color 0.15s;
+	}
+
+	footer a:hover {
+		color: var(--muted);
+	}
+
+	/* ---------- Responsive ---------- */
+	@media (max-width: 640px) {
+		main {
+			padding: 2.5rem 1rem 2rem;
+		}
+
+		.toolbar {
+			flex-direction: column;
+			gap: 0.45rem;
+		}
+
+		.sort {
+			width: 100%;
+			justify-content: stretch;
+		}
+
+		.sort-btn {
+			flex: 1;
+			text-align: center;
+			padding: 0.5rem 0.4rem;
+			font-size: 0.7rem;
+		}
+
+		.link-main {
+			padding: 0.55rem 0.75rem 0.55rem 1rem;
+			gap: 0.15rem;
+		}
+
+		.link-slug {
+			font-size: 0.95rem;
+		}
+
+		.link-target {
+			font-size: 0.75rem;
+		}
+
+		.analytics {
+			gap: 0.5rem;
+			padding: 0 0.65rem;
+		}
+
+		.stat-value {
+			font-size: 0.85rem;
+		}
+
+		.kbd {
+			display: none;
+		}
+	}
+
+	@media (max-width: 420px) {
+		.spark {
+			display: none;
+		}
+	}
+</style>
+
+<style is:global>
+	.spark-tooltip {
+		position: absolute;
+		z-index: 50;
+		pointer-events: none;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.1rem;
+		padding: 0.4rem 0.6rem;
+		border-radius: 8px;
+		background: #1a1a1a;
+		border: 1px solid #2e2e2e;
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+		color: #ededed;
+		font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-size: 0.72rem;
+		line-height: 1.25;
+		white-space: nowrap;
+	}
+
+	.spark-tooltip strong {
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: #c4b5fd;
+	}
+
+	.spark-tooltip span {
+		color: #8a8a8a;
+	}
+
+	.spark-tooltip[hidden] {
+		display: none;
+	}
+</style>

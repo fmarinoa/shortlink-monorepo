@@ -1,25 +1,14 @@
 {
-  "name": "shortlink-monorepo",
-  "description": "Monorepo for Shortlink application",
-  "version": "2.1.0",
-  "scripts": {
-    "dev:web": "pnpm --filter shortlink-web run dev",
-    "build:web": "pnpm --filter shortlink-web run build",
-    "build:core": "pnpm --filter @shortlink/core run build",
-    "deploy:api:dev": "pnpm --filter shortlink-api run deploy:dev",
-    "deploy:api:prod": "pnpm --filter shortlink-api run deploy:prod",
-    "lint": "pnpm -r run lint",
-    "prettier": "pnpm -r run prettier",
-    "test": "pnpm -r run test"
+  "name": "franco-links",
+  "type": "module",
+  "version": "3.0.0",
+  "packageManager": "pnpm@11.15.1",
+  "engines": {
+    "node": "22"
   },
   "author": {
     "name": "Franco Mariño",
     "url": "https://portfolio.francomarino.dev"
-  },
-  "devDependencies": {
-    "@tsconfig/node22": "22.0.5",
-    "prettier": "3.8.1",
-    "typescript": "5.9.3"
   },
   "repository": {
     "type": "git",
@@ -29,5 +18,15 @@
   "bugs": {
     "url": "https://github.com/fmarinoa/shortlink-monorepo/issues"
   },
-  "homepage": "https://github.com/fmarinoa/shortlink-monorepo#readme"
+  "homepage": "https://github.com/fmarinoa/shortlink-monorepo#readme",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "14.1.4",
+    "astro": "7.1.3"
+  }
 }

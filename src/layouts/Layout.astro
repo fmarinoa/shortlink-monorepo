@@ -1,0 +1,150 @@
+---
+interface Props {
+	title?: string;
+	description?: string;
+	image?: string;
+}
+
+const {
+	title = 'francomarino.dev · Acortador de URLs de Franco M.',
+	description = 'Todos los enlaces cortos de Franco M. en un solo lugar. Busca, copia y accede a cursos, recursos y herramientas recomendadas.',
+	image = '/og.png',
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://francomarino.dev');
+const ogImage = new URL(image, Astro.site ?? 'https://francomarino.dev');
+
+const jsonLd = {
+	'@context': 'https://schema.org',
+	'@type': 'WebSite',
+	name: 'francomarino.dev',
+	alternateName: 'Acortador de URLs de Franco M.',
+	url: canonical.origin,
+	description,
+	inLanguage: 'es',
+	author: {
+		'@type': 'Person',
+		name: 'Franco Mariño (fmarinoa)',
+		url: 'https://francomarino.dev',
+	},
+	potentialAction: {
+		'@type': 'SearchAction',
+		target: {
+			'@type': 'EntryPoint',
+			urlTemplate: `${canonical.origin}/?q={search_term_string}`,
+		},
+		'query-input': 'required name=search_term_string',
+	},
+};
+---
+
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+		<!-- Primary meta -->
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<meta name="author" content="fmarinoa" />
+		<meta name="robots" content="index, follow, max-image-preview:large" />
+		<meta name="theme-color" content="#0a0a0a" />
+		<link rel="canonical" href={canonical.href} />
+		<link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+		<!-- Open Graph -->
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="francomarino.dev" />
+		<meta property="og:locale" content="es_ES" />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:url" content={canonical.href} />
+		<meta property="og:image" content={ogImage.href} />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:image:alt" content="francomarino.dev · Acortador de URLs de Franco M." />
+
+		<!-- Fonts: preloaded and same-origin for a fast first paint -->
+		<link rel="preload" href="/fonts/GeistMono-Variable.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="preload" href="/fonts/GeistPixel-Square.woff2" as="font" type="font/woff2" crossorigin />
+
+		<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} is:inline />
+	</head>
+	<body>
+		<slot />
+	</body>
+</html>
+
+<style is:global>
+	@font-face {
+		font-family: 'Geist Mono';
+		src: url('/fonts/GeistMono-Variable.woff2') format('woff2');
+		font-weight: 100 900;
+		font-style: normal;
+		font-display: swap;
+	}
+
+	@font-face {
+		font-family: 'Geist Pixel';
+		src: url('/fonts/GeistPixel-Square.woff2') format('woff2');
+		font-weight: 400;
+		font-style: normal;
+		font-display: swap;
+	}
+
+	:root {
+		--bg: #0a0a0a;
+		--surface: #101010;
+		--surface-hover: #161616;
+		--border: #1e1e1e;
+		--border-hover: #2e2e2e;
+		--text: #ededed;
+		--muted: #8a8a8a;
+		--dim: #565656;
+		--accent: #a78bfa;
+		--accent-soft: rgba(167, 139, 250, 0.12);
+		--radius: 12px;
+		--mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+		--pixel: 'Geist Pixel', var(--mono);
+	}
+
+	* {
+		margin: 0;
+		padding: 0;
+		box-sizing: border-box;
+	}
+
+	html {
+		font-family: var(--mono);
+		background: var(--bg);
+		color: var(--text);
+		-webkit-font-smoothing: antialiased;
+		text-rendering: optimizeLegibility;
+		color-scheme: dark;
+	}
+
+	body {
+		min-height: 100vh;
+		background:
+			radial-gradient(60rem 40rem at 50% -12rem, rgba(167, 139, 250, 0.08), transparent 70%),
+			var(--bg);
+	}
+
+	::selection {
+		background: var(--accent-soft);
+		color: #fff;
+	}
+
+	a {
+		color: inherit;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		* {
+			transition: none !important;
+			scroll-behavior: auto !important;
+		}
+	}
+</style>

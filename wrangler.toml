@@ -1,0 +1,8 @@
+name = "shortlink"
+compatibility_date = "2024-12-16"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "shortlink"
+database_id = "2d327f8f-3cf8-4d6f-8991-0519df769655"
