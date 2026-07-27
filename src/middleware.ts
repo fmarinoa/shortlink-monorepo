@@ -1,12 +1,9 @@
 import { defineMiddleware } from 'astro:middleware';
+import { env } from 'cloudflare:workers';
 import { setDatabase } from './lib/db';
 
-export const onRequest = defineMiddleware((context, next) => {
-	try {
-		const db = (context.locals.runtime?.env as any)?.DB;
-		if (db) setDatabase(db);
-	} catch (err) {
-		// Binding no disponible en dev local, ignorar
-	}
+export const onRequest = defineMiddleware((_context, next) => {
+	const db = (env as any).DB;
+	if (db) setDatabase(db);
 	return next();
 });
