@@ -19,7 +19,7 @@ const prettyUrl = (url: string) => {
 		<header>
 			<h1>francomarino.dev</h1>
 			<p class="subtitle">
-				Acortador de URLs de <a href="https://francomarino.dev" target="_blank" rel="noopener noreferrer">Franco M.</a>
+				Acortador de URLs de <a href="https://portfolio.francomarino.dev" target="_blank" rel="noopener noreferrer">Franco M.</a>
 			</p>
 			<p class="count">
 				<span id="count">{links.length}</span> enlaces disponibles
@@ -39,7 +39,6 @@ const prettyUrl = (url: string) => {
 					placeholder="Buscar por nombre o destino..."
 					autocomplete="off"
 					spellcheck="false"
-					autofocus
 				/>
 				<kbd class="kbd">/</kbd>
 			</div>
@@ -559,6 +558,8 @@ const prettyUrl = (url: string) => {
 		font-family: var(--mono);
 		font-size: 0.95rem;
 		outline: none;
+		-webkit-appearance: none;
+		appearance: none;
 	}
 
 	#search::placeholder {
@@ -839,6 +840,10 @@ const prettyUrl = (url: string) => {
 		.toolbar {
 			flex-direction: column;
 			gap: 0.45rem;
+		}
+
+		.search-wrapper {
+			flex: none;
 		}
 
 		.sort {

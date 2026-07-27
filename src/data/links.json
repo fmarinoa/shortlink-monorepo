@@ -13,5 +13,10 @@
     "slug": "ig",
     "url": "https://www.instagram.com/franco.edson_",
     "created": "2026-07-26"
+  },
+  {
+    "slug": "portfolio",
+    "url": "https://portfolio.francomarino.dev",
+    "created": "2026-07-26"
   }
 ]
