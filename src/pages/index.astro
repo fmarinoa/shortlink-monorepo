@@ -1,6 +1,12 @@
 ---
+export const prerender = false;
+
 import Layout from '../layouts/Layout.astro';
 import links from '../data/links.json';
+
+if (Astro.url.hostname === 'francomarino.dev') {
+	return Astro.redirect('https://portfolio.francomarino.dev', 302);
+}
 
 const sortedLinks = [...links].sort((a, b) => a.slug.localeCompare(b.slug));
 

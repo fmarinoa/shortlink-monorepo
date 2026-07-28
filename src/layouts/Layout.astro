@@ -11,8 +11,8 @@ const {
 	image = '/og.png',
 } = Astro.props;
 
-const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://francomarino.dev');
-const ogImage = new URL(image, Astro.site ?? 'https://francomarino.dev');
+const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://links.francomarino.dev');
+const ogImage = new URL(image, Astro.site ?? 'https://links.francomarino.dev');
 
 const jsonLd = {
 	'@context': 'https://schema.org',

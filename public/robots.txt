@@ -3,4 +3,4 @@ Allow: /$
 Allow: /favicon.svg
 Allow: /og.png
 
-Sitemap: https:/francomarino.dev/sitemap.xml
+Sitemap: https:/links.francomarino.dev/sitemap.xml
