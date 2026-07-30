@@ -2,7 +2,7 @@
   "name": "franco-links",
   "type": "module",
   "version": "3.0.1",
-  "packageManager": "pnpm@11.17.0",
+  "packageManager": "pnpm@11.18.0",
   "engines": {
     "node": "24"
   },
@@ -20,21 +20,27 @@
   },
   "homepage": "https://github.com/fmarinoa/shortlink-monorepo#readme",
   "scripts": {
-    "dev": "astro dev",
+    "dev": "astro dev --host",
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
     "astro": "astro",
     "commit": "sh -c 'git commit -m \"$(agy -p \"Generate a concise conventional commit message based on this diff, response only in text format, without any extra text or markdown: $(git diff --staged)\")\"'",
     "commit:all": "git add . && npm run commit",
-    "pr:create": "gh pr create -t \"$(git branch --show-current)\" -b \"\""
+    "pr:create": "gh pr create -t \"$(git branch --show-current)\" -b \"\"",
+    "prepare": "husky"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "14.1.5",
-    "astro": "7.1.4"
+    "@astrojs/cloudflare": "14.1.7",
+    "astro": "7.1.6"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
-    "typescript": "6.0.3"
+    "husky": "9.1.7",
+    "lint-staged": "17.2.0",
+    "typescript": "7.0.2"
+  },
+  "lint-staged": {
+    "src/data/links.json": "node scripts/order-links.js"
   }
 }

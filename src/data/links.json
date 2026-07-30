@@ -5,9 +5,9 @@
     "created": "2026-07-26"
   },
   {
-    "slug": "wsp",
-    "url": "https://wa.me/+51932337417",
-    "created": "2026-07-26"
+    "slug": "github",
+    "url": "https://github.com/fmarinoa",
+    "created": "2026-07-30"
   },
   {
     "slug": "ig",
@@ -15,8 +15,18 @@
     "created": "2026-07-26"
   },
   {
+    "slug": "linkedin",
+    "url": "https://www.linkedin.com/in/fmarinoa/",
+    "created": "2026-07-30"
+  },
+  {
     "slug": "portfolio",
     "url": "https://portfolio.francomarino.dev",
+    "created": "2026-07-26"
+  },
+  {
+    "slug": "wsp",
+    "url": "https://wa.me/+51932337417",
     "created": "2026-07-26"
   }
 ]
