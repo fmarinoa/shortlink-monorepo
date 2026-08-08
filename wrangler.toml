@@ -8,6 +8,17 @@ database_name = "shortlink"
 database_id = "2d327f8f-3cf8-4d6f-8991-0519df769655"
 
 # Observability
-[observability.logs]
+[observability]
 enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
 invocation_logs = true
+
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1
